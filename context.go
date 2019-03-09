@@ -2,7 +2,10 @@
 
 package nosurf
 
-import "net/http"
+import (
+	"errors"
+	"net/http"
+)
 
 type ctxKey int
 
@@ -28,11 +31,10 @@ type csrfContext struct {
 // or after the request has been served)
 func Token(req *http.Request) string {
 	ctx, ok := req.Context().Value(nosurfKey).(*csrfContext)
-	if !ok {
-		return ""
+	if ok {
+		return ctx.token
 	}
-
-	return ctx.token
+	return ""
 }
 
 // Reason takes an HTTP request and returns
@@ -40,9 +42,11 @@ func Token(req *http.Request) string {
 //
 // Note that the same availability restrictions apply for Reason() as for Token().
 func Reason(req *http.Request) error {
-	ctx := req.Context().Value(nosurfKey).(*csrfContext)
-
-	return ctx.reason
+	ctx, ok := req.Context().Value(nosurfKey).(*csrfContext)
+	if ok {
+		return ctx.reason
+	}
+	return errors.New("no key")
 }
 
 func ctxClear(_ *http.Request) {
